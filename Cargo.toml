@@ -1,0 +1,8 @@
+[package]
+name = "differential-aggregate-query"
+version = "0.1.0"
+authors = ["David Bach <bachd@ethz.ch>"]
+
+[dependencies]
+timely = "0.8"
+differential-dataflow = "0.8"
