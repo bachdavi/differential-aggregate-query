@@ -1,6 +1,6 @@
 # Differential Aggregate Query
 
-An incremental implementation of the Functional Aggregate Query (FAQ) framework in Rust using [Differential Dataflow](https://github.com/comnik/declarative-dataflow).
+An incremental implementation of the Functional Aggregate Query (FAQ) framework in Rust using [Differential Dataflow](https://github.com/TimelyDataflow/differential-dataflow).
 
 This is a research project and currently does only provide a naive implementation of the `insideOut` algorithm to compute FAQ Queries.
 
