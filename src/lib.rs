@@ -134,7 +134,7 @@ where
             .fold(self.factors, |mut factors, (var, agg)| {
                 let hyper_edges: Vec<T> = factors.drain_filter(|x| x.participate(&var)).collect();
                 let factor_prime = eliminate(hyper_edges, agg, var);
-                factors.insert(0, factor_prime);
+                factors.push(factor_prime);
                 factors
             });
         // TODO Implement faqs free variable join
