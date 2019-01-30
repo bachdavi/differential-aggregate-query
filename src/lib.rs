@@ -21,11 +21,23 @@ use differential_dataflow::Data;
 
 pub mod factors;
 
-// Union of two vectors preserving the order
-pub fn vertex_union<T: PartialEq + Clone>(left: &Vec<T>, right: &Vec<T>) -> Vec<T> {
-    left.iter()
-        .filter(|x| !right.contains(x))
-        .chain(right.iter())
+// Union of variables of multiple factors
+pub fn union<T: PartialEq + Clone>(variables: &Vec<Vec<T>>) -> Vec<T> {
+    let (first, rest) = variables.split_first().unwrap();
+    rest.iter().fold(first.to_vec(), |acc, right| {
+        acc.iter()
+            .filter(|x| !right.contains(x))
+            .chain(right.iter())
+            .cloned()
+            .collect()
+    })
+}
+
+// Intersection of variables of multiple factors
+pub fn intersection<T: PartialEq + Clone>(variables: &Vec<Vec<T>>) -> Vec<T> {
+    let (first, rest) = variables.split_first().unwrap();
+    first
+        .iter()
         .cloned()
         .collect()
 }
