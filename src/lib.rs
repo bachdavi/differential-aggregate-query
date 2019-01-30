@@ -39,6 +39,7 @@ pub fn intersection<T: PartialEq + Clone>(variables: &Vec<Vec<T>>) -> Vec<T> {
     first
         .iter()
         .cloned()
+        .filter(|var| rest.iter().all(|x| x.contains(&var)))
         .collect()
 }
 
@@ -82,46 +83,29 @@ pub struct Query<T, A> {
     pub variable_order: Vec<u32>,
 }
 
-pub fn eliminate<
-    'a,
-    G: Scope,
-    D: Data,
-    K: Data + Hashable,
-    T: Factor<'a, G, D, K>,
-    A: Aggregate<'a, G, D, K, T>,
->(
+pub fn join_factors<'a, G: Scope, D: Data, K: Data + Hashable, T: Factor<'a, G, D, K>>(
     mut factors: Vec<T>,
-    aggregate: A,
-    var: u32,
 ) -> T
 where
     G::Timestamp: Lattice + Ord,
 {
+    // Compute the intersection of all factors
+    let variables: Vec<Vec<u32>> = factors.iter().map(|f| f.vertices()).collect();
+    let join_vars = intersection(&variables);
+
     // Recursivly joins all factors
     let left = factors.remove(0);
-    let joined = factors.into_iter().fold(left, |factor, next| {
-        let mut vertices = factor.vertices().clone();
-        let next_vertices = next.vertices().clone();
-        let join_vars = vertices
-            .drain_filter(|x| next.vertices().contains(x))
-            .collect();
+    factors.into_iter().fold(left, |factor, next| {
+        let variables = union(&vec![factor.vertices(), next.vertices()]);
 
         let tuples = factor
             .tuples_by_variables(&join_vars)
             .join(&next.tuples_by_variables(&join_vars));
 
-        T::normalize(
-            vertex_union(
-                &join_vars.into_iter().chain(vertices.into_iter()).collect(),
-                &next_vertices,
-            ),
-            tuples,
-        )
-    });
-    // Aggregate `var` with `aggregate`
-    aggregate.implement(joined, var)
+        T::normalize(variables, tuples)
+    })
 }
-// TODO Run FAQ in iterative child scope
+
 impl<
         'a,
         G: Scope,
@@ -140,17 +124,17 @@ where
             .cloned()
             .zip(self.aggregates.iter().cloned())
             .collect();
-        // Reduce over factors, vertices and aggregates to return a single Factor
-        let mut faq = zipped
+        // Reduce over factors, vertices and aggregates to return an faq instance over only free variables
+        let faq = zipped
             .into_iter()
             .fold(self.factors, |mut factors, (var, agg)| {
                 let hyper_edges: Vec<T> = factors.drain_filter(|x| x.participate(&var)).collect();
-                let factor_prime = eliminate(hyper_edges, agg, var);
-                factors.push(factor_prime);
+                let factor_prime = join_factors(hyper_edges);
+                factors.push(agg.implement(factor_prime, var));
                 factors
             });
-        // TODO Implement faqs free variable join
-        let output = faq.remove(0);
+        // Join the remaining factors to produce the output representation
+        let output = join_factors(faq);
         output
     }
 }
