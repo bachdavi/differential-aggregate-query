@@ -8,7 +8,7 @@ use differential_aggregate_query::factors::graph::{
     AggregationFn::SUM, GraphAggregate, GraphFactor,
 };
 
-use differential_aggregate_query::{Factor, InsideOut, Query};
+use differential_aggregate_query::{Factor, InsideOut, Query, Value};
 
 fn main() {
     timely::execute_from_args(std::env::args(), move |worker| {
@@ -54,14 +54,14 @@ fn main() {
 
         // Create a few edges
         input.advance_to(0);
-        input.insert(vec![1, 2]);
-        input.insert(vec![1, 3]);
-        input.insert(vec![2, 3]);
-        input.insert(vec![2, 4]);
-        input.insert(vec![4, 5]);
-        input.insert(vec![5, 6]);
-        input.insert(vec![6, 7]);
-        input.insert(vec![5, 7]);
+        input.insert(vec![Value::Number(1), Value::Number(2)]);
+        input.insert(vec![Value::Number(1), Value::Number(3)]);
+        input.insert(vec![Value::Number(2), Value::Number(3)]);
+        input.insert(vec![Value::Number(2), Value::Number(4)]);
+        input.insert(vec![Value::Number(4), Value::Number(5)]);
+        input.insert(vec![Value::Number(5), Value::Number(6)]);
+        input.insert(vec![Value::Number(6), Value::Number(7)]);
+        input.insert(vec![Value::Number(5), Value::Number(7)]);
     })
     .expect("Computation terminated abnormally");
 }
