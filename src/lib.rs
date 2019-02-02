@@ -111,27 +111,35 @@ where
     let variables: Vec<Vec<u32>> = factors.iter().map(|f| f.vertices()).collect();
     let join_vars = intersection(&variables);
 
-    // Recursivly joins all factors
+    // Join all factors
     let left = factors.remove(0);
-    factors.into_iter().fold(left, |factor, next| {
-        let variables = union(&vec![factor.vertices(), next.vertices()]);
+    let input: Vec<Collection<G, (Vec<Value>, Vec<Value>), isize>> = factors
+        .into_iter()
+        .map(|f| f.tuples_by_variables(&join_vars))
+        .collect();
+    let tuples = input
+        .iter()
+        .fold(left.tuples_by_variables(&join_vars), |left, right| {
+            left.join_map(&right, |k, val1, val2| {
+                (
+                    k.clone(),
+                    val1.iter().cloned().chain(val2.iter().cloned()).collect(),
+                )
+            })
+        });
 
-        let tuples = factor
-            .tuples_by_variables(&join_vars)
-            .join(&next.tuples_by_variables(&join_vars));
-
-        T::normalize(variables, tuples)
-    })
+    // Normalize: (K, V) -> V, potentially enforcing factor specific invariants
+    // Normalize also consolidates and thus computes the semi-ring aggregates of the given diff
+    // In vanilla differential dataflow it is a sum
+    T::normalize(union(&variables), tuples)
 }
 
 impl<
         'a,
         G: Scope,
-        D: Data,
-        K: Data + Hashable,
-        T: Factor<'a, G, D, K>,
-        A: Aggregate<'a, G, D, K, T> + Clone,
-    > InsideOut<'a, G, D, K, T> for Query<T, A>
+        T: Factor<'a, G>,
+        A: Aggregate<'a, G, T> + Clone,
+    > InsideOut<'a, G, T> for Query<T, A>
 where
     G::Timestamp: Lattice + Ord,
 {
@@ -148,6 +156,8 @@ where
             .fold(self.factors, |mut factors, (var, agg)| {
                 let hyper_edges: Vec<T> = factors.drain_filter(|x| x.participate(&var)).collect();
                 let factor_prime = join_factors(hyper_edges);
+                // TODO We do not really need aggregations as they are implicitly done by differentials consolidate.
+                // We need to add other semi-ring aggregates as diff traits if we want more the SumProd FAQ's
                 factors.push(agg.implement(factor_prime, var));
                 factors
             });
