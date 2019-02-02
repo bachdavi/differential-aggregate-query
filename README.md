@@ -13,11 +13,12 @@ The FAQ framework is discussed in this paper [FAQ: Questions Asked Frequently](h
 
 FAQ generalizes a bunch of different, on first glance unconnected problems by expressing them as aggregates over hypergraphs.
 
-Factors are Differential Dataflow collections with generic datatype.
+Factors are Differential Dataflow collections with generic datatype representing the input and output in listing format. 
+That means every tuple in the collection has a support and a factor value. The factor value resides in the diff.
 
-In order to provide a general implementation of `insideOut` every class of factors implements their own handling of aggregates and their corresponding datatype.
+Currently we only support the SumProd semi-ring as differential dataflows join represents the product and consolidate the sum. 
 
-Currently there is only a graph factor implementation.
+More semi-ring aggregates will be added by implementing the correct diff trait.
 
 ## Running
 
