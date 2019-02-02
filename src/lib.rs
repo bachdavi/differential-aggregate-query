@@ -14,12 +14,28 @@ extern crate timely;
 use timely::dataflow::*;
 
 use differential_dataflow::collection::Collection;
-use differential_dataflow::hashable::Hashable;
 use differential_dataflow::lattice::Lattice;
 use differential_dataflow::operators::Join as JoinMap;
-use differential_dataflow::Data;
 
 pub mod factors;
+
+extern crate abomonation;
+#[macro_use]
+extern crate serde_derive;
+
+/// Possible data values.
+///
+/// This enum captures the currently supported data types, and is the least common denominator
+/// for the types of records moved around.
+#[derive(Hash, PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Serialize, Deserialize)]
+pub enum Value {
+    /// A string
+    String(String),
+    /// A boolean
+    Bool(bool),
+    /// A 64 bit signed integer
+    Number(i64),
+}
 
 // Union of variables of multiple factors
 pub fn union<T: PartialEq + Clone>(variables: &Vec<Vec<T>>) -> Vec<T> {
@@ -43,25 +59,27 @@ pub fn intersection<T: PartialEq + Clone>(variables: &Vec<Vec<T>>) -> Vec<T> {
         .collect()
 }
 
-pub trait Factor<'a, G: Scope, D, K>
+pub trait Factor<'a, G: Scope>
 where
-    D: Data,
-    K: Data + Hashable,
     G::Timestamp: Lattice + Ord,
 {
     /// Creates a new factor from the joined collection
-    fn normalize(vertices: Vec<u32>, tuples: Collection<G, (K, (D, D)), isize>) -> Self;
+    fn normalize(
+        vertices: Vec<u32>,
+        tuples: Collection<G, (Vec<Value>, Vec<Value>), isize>,
+    ) -> Self;
     /// List the vertices for a given factor
     fn vertices(&self) -> Vec<u32>;
     /// A collection containing all tuples
-    fn tuples(self) -> Collection<G, D, isize>;
+    fn tuples(self) -> Collection<G, Vec<Value>, isize>;
     /// Determine if the given factor should participate in insideOut
     fn participate(&self, var: &u32) -> bool;
     /// Arrange the tuples, s.t. we can join
-    fn tuples_by_variables(self, vars: &Vec<u32>) -> Collection<G, (K, D), isize>;
+    fn tuples_by_variables(self, vars: &Vec<u32>)
+        -> Collection<G, (Vec<Value>, Vec<Value>), isize>;
 }
 
-pub trait Aggregate<'a, G: Scope, D: Data, K: Data + Hashable, T: Factor<'a, G, D, K>>
+pub trait Aggregate<'a, G: Scope,T: Factor<'a, G>>
 where
     G::Timestamp: Lattice + Ord,
 {
@@ -69,7 +87,7 @@ where
     fn implement(self, factor: T, var: u32) -> T;
 }
 
-pub trait InsideOut<'a, G: Scope, D: Data, K: Data + Hashable, T: Factor<'a, G, D, K>>
+pub trait InsideOut<'a, G: Scope, T: Factor<'a, G>>
 where
     G::Timestamp: Lattice + Ord,
 {
@@ -83,7 +101,7 @@ pub struct Query<T, A> {
     pub variable_order: Vec<u32>,
 }
 
-pub fn join_factors<'a, G: Scope, D: Data, K: Data + Hashable, T: Factor<'a, G, D, K>>(
+pub fn join_factors<'a, G: Scope,T: Factor<'a, G>>(
     mut factors: Vec<T>,
 ) -> T
 where
