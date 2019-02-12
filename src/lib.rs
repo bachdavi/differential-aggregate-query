@@ -40,24 +40,28 @@ pub enum Value {
 
 // Union of variables of multiple factors
 pub fn union<T: PartialEq + Clone>(variables: &Vec<Vec<T>>) -> Vec<T> {
-    let (first, rest) = variables.split_first().unwrap();
-    rest.iter().fold(first.to_vec(), |acc, right| {
-        acc.iter()
-            .filter(|x| !right.contains(x))
-            .chain(right.iter())
-            .cloned()
-            .collect()
-    })
+    match variables.split_first() {
+        Some((first, rest)) => rest.iter().fold(first.to_vec(), |acc, right| {
+            acc.iter()
+                .filter(|x| !right.contains(x))
+                .chain(right.iter())
+                .cloned()
+                .collect()
+        }),
+        None => vec![],
+    }
 }
 
 // Intersection of variables of multiple factors
 pub fn intersection<T: PartialEq + Clone>(variables: &Vec<Vec<T>>) -> Vec<T> {
-    let (first, rest) = variables.split_first().unwrap();
-    first
-        .iter()
-        .cloned()
-        .filter(|var| rest.iter().all(|x| x.contains(&var)))
-        .collect()
+    match variables.split_first() {
+        Some((first, rest)) => first
+            .iter()
+            .cloned()
+            .filter(|var| rest.iter().all(|x| x.contains(&var)))
+            .collect(),
+        None => vec![],
+    }
 }
 
 pub trait Factor<'a, G: Scope>
