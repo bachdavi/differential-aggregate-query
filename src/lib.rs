@@ -86,14 +86,6 @@ where
         -> Collection<G, (Vec<Value>, Vec<Value>), isize>;
 }
 
-pub trait Aggregate<'a, G: Scope,T: Factor<'a, G>>
-where
-    G::Timestamp: Lattice + Ord,
-{
-    /// Implements the given aggregate for the generic datatype D
-    fn implement(self, factor: T, var: u32) -> T;
-}
-
 pub trait InsideOut<'a, G: Scope, T: Factor<'a, G>>
 where
     G::Timestamp: Lattice + Ord,
@@ -102,9 +94,8 @@ where
     fn inside_out(self) -> T;
 }
 
-pub struct Query<T, A> {
+pub struct Query<T> {
     pub factors: Vec<T>,
-    pub aggregates: Vec<A>,
     pub variable_order: Vec<u32>,
 }
 

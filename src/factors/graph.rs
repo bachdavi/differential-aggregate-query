@@ -6,7 +6,7 @@ use timely::dataflow::*;
 use differential_dataflow::collection::Collection;
 use differential_dataflow::lattice::Lattice;
 
-use {Aggregate, Factor, Value};
+use {Factor, Value};
 
 pub struct GraphFactor<G: Scope> {
     pub vertices: Vec<u32>,
@@ -72,37 +72,5 @@ where
                     .collect(),
             )
         })
-    }
-}
-
-/// Permitted aggregation function.
-#[derive(Clone, Debug)]
-pub enum AggregationFn {
-    /// Sum
-    SUM,
-}
-
-#[derive(Clone, Debug)]
-pub struct GraphAggregate {
-    pub aggregation_fn: AggregationFn,
-}
-
-// TODO Sort the graph factor aggregations out
-impl<'a, G: Scope> Aggregate<'a, G, GraphFactor<G>> for GraphAggregate
-where
-    G::Timestamp: Lattice + Ord,
-{
-    fn implement(self, factor: GraphFactor<G>, var: u32) -> GraphFactor<G> {
-        match self.aggregation_fn {
-            AggregationFn::SUM => GraphFactor {
-                vertices: factor
-                    .vertices()
-                    .iter()
-                    .filter(|x| **x != var)
-                    .cloned()
-                    .collect(),
-                tuples: factor.tuples(),
-            },
-        }
     }
 }

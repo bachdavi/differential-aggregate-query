@@ -4,9 +4,7 @@ extern crate timely;
 
 use differential_dataflow::input::InputSession;
 
-use differential_aggregate_query::factors::graph::{
-    AggregationFn::SUM, GraphAggregate, GraphFactor,
-};
+use differential_aggregate_query::factors::graph::{GraphFactor};
 
 use differential_aggregate_query::{Factor, InsideOut, Query, Value};
 
@@ -31,17 +29,6 @@ fn main() {
 
             let faq = Query {
                 factors: vec![graph_factor_1, graph_factor_2, graph_factor_3],
-                aggregates: vec![
-                    GraphAggregate {
-                        aggregation_fn: SUM,
-                    },
-                    GraphAggregate {
-                        aggregation_fn: SUM,
-                    },
-                    GraphAggregate {
-                        aggregation_fn: SUM,
-                    },
-                ],
                 variable_order: vec![3, 2, 1],
             };
 
@@ -61,6 +48,7 @@ fn main() {
         input.insert(vec![Value::Number(4), Value::Number(5)]);
         input.insert(vec![Value::Number(5), Value::Number(6)]);
         input.insert(vec![Value::Number(6), Value::Number(7)]);
+        input.advance_to(1);
         input.insert(vec![Value::Number(5), Value::Number(7)]);
     })
     .expect("Computation terminated abnormally");
