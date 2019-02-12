@@ -5,7 +5,6 @@ use timely::dataflow::*;
 
 use differential_dataflow::collection::Collection;
 use differential_dataflow::lattice::Lattice;
-use differential_dataflow::operators::Consolidate;
 
 use {Aggregate, Factor, Value};
 
@@ -18,16 +17,25 @@ impl<'a, G: Scope> Factor<'a, G> for GraphFactor<G>
 where
     G::Timestamp: Lattice + Ord,
 {
+    fn new(vertices: Vec<u32>, tuples: Collection<G, Vec<Value>, isize>) -> GraphFactor<G> {
+        GraphFactor {
+            vertices: vertices,
+            tuples: tuples,
+        }
+    }
     fn normalize(
         vertices: Vec<u32>,
         tuples: Collection<G, (Vec<Value>, Vec<Value>), isize>,
     ) -> GraphFactor<G> {
         GraphFactor {
             vertices: vertices,
-            tuples: tuples
-                .map(|(_k, v)| v.clone())
-                .filter(|x| if x.len() > 2 { x[0] < x[1] } else { true })
-                .consolidate(),
+            tuples: tuples.map(|(_k, v)| v.clone()).filter(|x| {
+                if x.len() > 2 {
+                    x[0] < x[1]
+                } else {
+                    true
+                }
+            }),
         }
     }
     fn vertices(&self) -> Vec<u32> {

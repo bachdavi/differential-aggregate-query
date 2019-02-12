@@ -15,6 +15,7 @@ use timely::dataflow::*;
 
 use differential_dataflow::collection::Collection;
 use differential_dataflow::lattice::Lattice;
+use differential_dataflow::operators::Count;
 use differential_dataflow::operators::Join as JoinMap;
 
 pub mod factors;
@@ -63,6 +64,8 @@ pub trait Factor<'a, G: Scope>
 where
     G::Timestamp: Lattice + Ord,
 {
+    /// Create a new factor from variables and a Collection
+    fn new(vertices: Vec<u32>, tuples: Collection<G, Vec<Value>, isize>) -> Self;
     /// Creates a new factor from the joined collection
     fn normalize(
         vertices: Vec<u32>,
@@ -101,9 +104,8 @@ pub struct Query<T, A> {
     pub variable_order: Vec<u32>,
 }
 
-pub fn join_factors<'a, G: Scope,T: Factor<'a, G>>(
-    mut factors: Vec<T>,
-) -> T
+// Joining factors alongside their least common denominator
+pub fn join<'a, G: Scope, T: Factor<'a, G>>(mut factors: Vec<T>) -> T
 where
     G::Timestamp: Lattice + Ord,
 {
@@ -129,40 +131,45 @@ where
         });
 
     // Normalize: (K, V) -> V, potentially enforcing factor specific invariants
-    // Normalize also consolidates and thus computes the semi-ring aggregates of the given diff
-    // In vanilla differential dataflow it is a sum
     T::normalize(union(&variables), tuples)
 }
 
-impl<
-        'a,
-        G: Scope,
-        T: Factor<'a, G>,
-        A: Aggregate<'a, G, T> + Clone,
-    > InsideOut<'a, G, T> for Query<T, A>
+// Eliminate the given variable
+pub fn eliminate<'a, G: Scope, T: Factor<'a, G>>(factor: T, var: u32) -> T
+where
+    G::Timestamp: Lattice + Ord,
+{
+    T::new(
+        factor
+            .vertices()
+            .iter()
+            .filter(|x| **x != var)
+            .cloned()
+            .collect(),
+        factor
+            .tuples()
+            .count()
+            .explode(|(val, count)| Some((val, count))),
+    )
+}
+
+impl<'a, G: Scope, T: Factor<'a, G>> InsideOut<'a, G, T> for Query<T>
 where
     G::Timestamp: Lattice + Ord,
 {
     fn inside_out(self) -> T {
-        let zipped: Vec<(u32, A)> = self
-            .variable_order
-            .iter()
-            .cloned()
-            .zip(self.aggregates.iter().cloned())
-            .collect();
         // Reduce over factors, vertices and aggregates to return an faq instance over only free variables
-        let faq = zipped
+        let faq = self
+            .variable_order
             .into_iter()
-            .fold(self.factors, |mut factors, (var, agg)| {
+            .fold(self.factors, |mut factors, var| {
                 let hyper_edges: Vec<T> = factors.drain_filter(|x| x.participate(&var)).collect();
-                let factor_prime = join_factors(hyper_edges);
-                // TODO We do not really need aggregations as they are implicitly done by differentials consolidate.
-                // We need to add other semi-ring aggregates as diff traits if we want more the SumProd FAQ's
-                factors.push(agg.implement(factor_prime, var));
+                let factor_prime = eliminate(join(hyper_edges), var);
+                factors.push(factor_prime);
                 factors
             });
         // Join the remaining factors to produce the output representation
-        let output = join_factors(faq);
+        let output = join(faq);
         output
     }
 }
