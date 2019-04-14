@@ -87,12 +87,17 @@ where
         pos: usize,
     ) -> Collection<G, Vec<Value>, D> {
         tuples.map(move |(k, v)| {
-            let mut rem: Vec<Value> = k.iter().enumerate().filter(|(i, _x)| *i != pos).map(|(_i, x)| x.clone()).collect();
+            let mut rem: Vec<Value> = k
+                .iter()
+                .enumerate()
+                .filter(|(i, _x)| *i != pos)
+                .map(|(_i, x)| x.clone())
+                .collect();
             let mut values: Vec<Value> = v.clone();
             values.append(&mut rem);
             values
         })
-            // .inspect(|x|println!("{:?}", x))
+        // .inspect(|x|println!("{:?}", x))
     }
     /// List the variables for a given factor
     fn variables(&self) -> Vec<u32>;
@@ -201,7 +206,7 @@ where
     D: Monoid + Mul<Output = D> + Convert,
 {
     let (variables, join_vars, tuples) = joined;
-    let pos:usize = join_vars.iter().position(|&v| var == v).unwrap();
+    let pos: usize = join_vars.iter().position(|&v| var == v).unwrap();
 
     T::new(
         variables.iter().filter(|x| **x != var).cloned().collect(),
