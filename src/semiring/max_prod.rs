@@ -1,7 +1,7 @@
 //! Semirring implementations MaxProd
 
 use differential_dataflow::difference::Monoid;
-use std::ops::{Add, Mul};
+use std::ops::{AddAssign, Neg, Mul};
 
 use Convert;
 
@@ -12,10 +12,9 @@ pub struct MaxProd {
     pub value: u32,
 }
 
-impl Add<Self> for MaxProd {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self {
-        MaxProd {
+impl<'a> AddAssign<&'a Self> for MaxProd {
+    fn add_assign(&mut self, rhs: &MaxProd) {
+        *self = MaxProd {
             value: std::cmp::max(self.value, rhs.value),
         }
     }

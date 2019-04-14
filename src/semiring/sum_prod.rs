@@ -2,7 +2,7 @@
 
 use differential_dataflow::difference::Monoid;
 use std::cmp::Ordering;
-use std::ops::{Add, Mul};
+use std::ops::{AddAssign, Neg, Mul};
 
 use Convert;
 
@@ -45,14 +45,22 @@ impl Ord for SumProd {
     }
 }
 
-impl Add<Self> for SumProd {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self {
-        SumProd {
+impl<'a> AddAssign<&'a Self> for SumProd {
+    fn add_assign(&mut self, rhs: &SumProd) {
+        *self = SumProd {
             value: self.value + rhs.value,
         }
     }
 }
+
+// impl AddAssign<Self> for SumProd {
+//     type Output = Self;
+//     fn add(self, rhs: Self) -> Self {
+//         SumProd {
+//             value: self.value + rhs.value,
+//         }
+//     }
+// }
 
 impl Mul<Self> for SumProd {
     type Output = Self;
