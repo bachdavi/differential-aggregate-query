@@ -1,76 +1,44 @@
 //! Graph Factors.
 //! A Factor implementation for graph problems.
 
+use std::ops::Mul;
+
 use timely::dataflow::*;
 
 use differential_dataflow::collection::Collection;
+use differential_dataflow::difference::Monoid;
 use differential_dataflow::lattice::Lattice;
 
-use {Factor, Value};
+use {Convert, Factor, Value};
 
-pub struct GraphFactor<G: Scope> {
-    pub vertices: Vec<u32>,
-    pub tuples: Collection<G, Vec<Value>, isize>,
+pub struct GraphFactor<G: Scope, D: Monoid> {
+    pub variables: Vec<u32>,
+    pub tuples: Collection<G, Vec<Value>, D>,
 }
 
-impl<'a, G: Scope> Factor<'a, G> for GraphFactor<G>
+impl<'a, G: Scope, D> Factor<'a, G, D> for GraphFactor<G, D>
 where
     G::Timestamp: Lattice + Ord,
+    D: Monoid + Mul<Output = D> + Convert,
 {
-    fn new(vertices: Vec<u32>, tuples: Collection<G, Vec<Value>, isize>) -> GraphFactor<G> {
+    fn new(variables: Vec<u32>, tuples: Collection<G, Vec<Value>, D>) -> GraphFactor<G, D> {
         GraphFactor {
-            vertices: vertices,
+            variables: variables,
             tuples: tuples,
         }
     }
     fn normalize(
-        vertices: Vec<u32>,
-        tuples: Collection<G, (Vec<Value>, Vec<Value>), isize>,
-    ) -> GraphFactor<G> {
-        GraphFactor {
-            vertices: vertices,
-            tuples: tuples.map(|(_k, v)| v.clone()).filter(|x| {
-                if x.len() > 2 {
-                    x[0] < x[1]
-                } else {
-                    true
-                }
-            }),
-        }
+        tuples: Collection<G, (Vec<Value>, Vec<Value>), D>,
+        pos: usize,
+    ) -> Collection<G, Vec<Value>, D> {
+        tuples
+            .map(|(_k, v)| v.clone())
+            .filter(|x| if x.len() == 2 { x[0] < x[1] } else { true })
     }
-    fn vertices(&self) -> Vec<u32> {
-        self.vertices.clone()
+    fn variables(&self) -> Vec<u32> {
+        self.variables.clone()
     }
-    fn tuples(self) -> Collection<G, Vec<Value>, isize> {
+    fn tuples(self) -> Collection<G, Vec<Value>, D> {
         self.tuples
-    }
-    fn participate(&self, var: &u32) -> bool {
-        self.vertices.contains(&var)
-    }
-    fn tuples_by_variables(
-        self,
-        vars: &Vec<u32>,
-    ) -> Collection<G, (Vec<Value>, Vec<Value>), isize> {
-        // We join either left, right or both
-        let pos: Vec<usize> = vars
-            .into_iter()
-            .flat_map(|x| self.vertices().iter().position(|&v| x == &v))
-            .collect();
-        self.tuples().map(move |tuple| {
-            (
-                tuple
-                    .iter()
-                    .enumerate()
-                    .filter(|(i, _x)| pos.contains(&i))
-                    .map(|(_i, x)| x.clone())
-                    .collect(),
-                tuple
-                    .iter()
-                    .enumerate()
-                    .filter(|(i, _x)| !pos.contains(&i))
-                    .map(|(_i, x)| x.clone())
-                    .collect(),
-            )
-        })
     }
 }
