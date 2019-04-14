@@ -4,8 +4,9 @@ extern crate timely;
 
 use differential_dataflow::input::InputSession;
 
-use differential_aggregate_query::factors::graph::{GraphFactor};
+use differential_aggregate_query::factors::graph::GraphFactor;
 
+use differential_aggregate_query::semiring::max_prod::MaxProd;
 use differential_aggregate_query::{Factor, InsideOut, Query, Value};
 
 fn main() {
@@ -15,15 +16,15 @@ fn main() {
         // Triangle counting
         worker.dataflow::<u64, _, _>(|scope| {
             let graph_factor_1 = GraphFactor {
-                vertices: vec![2, 3],
+                variables: vec![2, 3],
                 tuples: input.to_collection(scope),
             };
             let graph_factor_2 = GraphFactor {
-                vertices: vec![1, 2],
+                variables: vec![1, 2],
                 tuples: input.to_collection(scope),
             };
             let graph_factor_3 = GraphFactor {
-                vertices: vec![1, 3],
+                variables: vec![1, 3],
                 tuples: input.to_collection(scope),
             };
 
@@ -41,15 +42,39 @@ fn main() {
 
         // Create a few edges
         input.advance_to(0);
-        input.insert(vec![Value::Number(1), Value::Number(2)]);
-        input.insert(vec![Value::Number(1), Value::Number(3)]);
-        input.insert(vec![Value::Number(2), Value::Number(3)]);
-        input.insert(vec![Value::Number(2), Value::Number(4)]);
-        input.insert(vec![Value::Number(4), Value::Number(5)]);
-        input.insert(vec![Value::Number(5), Value::Number(6)]);
-        input.insert(vec![Value::Number(6), Value::Number(7)]);
+        input.update(
+            vec![Value::Number(1), Value::Number(2)],
+            MaxProd { value: 1 },
+        );
+        input.update(
+            vec![Value::Number(1), Value::Number(3)],
+            MaxProd { value: 1 },
+        );
+        input.update(
+            vec![Value::Number(2), Value::Number(3)],
+            MaxProd { value: 1 },
+        );
+        input.update(
+            vec![Value::Number(2), Value::Number(4)],
+            MaxProd { value: 1 },
+        );
+        input.update(
+            vec![Value::Number(4), Value::Number(5)],
+            MaxProd { value: 1 },
+        );
+        input.update(
+            vec![Value::Number(5), Value::Number(6)],
+            MaxProd { value: 1 },
+        );
+        input.update(
+            vec![Value::Number(6), Value::Number(7)],
+            MaxProd { value: 1 },
+        );
         input.advance_to(1);
-        input.insert(vec![Value::Number(5), Value::Number(7)]);
+        input.update(
+            vec![Value::Number(5), Value::Number(7)],
+            MaxProd { value: 1 },
+        );
     })
     .expect("Computation terminated abnormally");
 }
